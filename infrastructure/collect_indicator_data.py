@@ -15,7 +15,7 @@ def collect_support_resistance_data(candles_dict: dict):
 
         for granularity, candles in candles_dict.items():
 
-            if granularity in ['M15', 'H4', 'D']:
+            if granularity in ['M5', 'M15', 'D']:
                 num_candles = sup_res_values.get(granularity, (0, 0))[2] if len(sup_res_values.get(granularity, (0, 0))) == 3 else 50
 
                 candles['support_resistance'] = candles.apply(

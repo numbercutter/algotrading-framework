@@ -72,7 +72,7 @@ class handfruit_hedge:
                 account_id=self.account_id
             )
 
-            self.simulation_data[self.symbol] = simulation_acc.simulation_acc("2015-01-01T00:00:00Z", "2016-01-01T00:00:00Z", 10000)
+            self.simulation_data[self.symbol] = simulation_acc.simulation_acc("2022-01-01T00:00:00Z", "2023-01-01T00:00:00Z", 10000)
 
         # Log the start of the bot
         self.algorithm_tools.log_to_main("SR Bot started")
@@ -156,7 +156,7 @@ class handfruit_hedge:
 
                 if self.simulation:
                     sim = self.simulation_data[self.symbol]
-                    s_r = pd.read_pickle(f"{'./data/oanda_2005_2023/'}_{'support_resistance'}_{self.symbol}_{granularity}.pkl")
+                    s_r = pd.read_pickle(f"{'./data/'}_{'support_resistance'}_{self.symbol}_{granularity}.pkl")
                     #self.algorithm_tools.log_to_main(s_r)
                     s_r = s_r[(s_r.time>=sim.start)&(s_r.time<sim.end)]
                     s_r.reset_index(drop=True, inplace=True)
@@ -350,73 +350,15 @@ class handfruit_hedge:
 
         # Modify CLOSE values with position size multiplier
         CLOSE = [round(value * pos_close_mult, 2) for value in CLOSE]
-        
+        print(CLOSE)
 
 
 
-        top_half_D, bottom_half_D = Indicators.split_clusters(S_R_D)
-        top_half_M15, bottom_half_M15 = Indicators.split_clusters(S_R_15)
-        top_half_M5, bottom_half_M5 = Indicators.split_clusters(S_R_5)
-
-        risk_score_D = Indicators.risk_web(S_R_D, CURRENT_ASK)
-        risk_score_M15 = Indicators.risk_web(S_R_15, CURRENT_ASK)
-        risk_score_M5 = Indicators.risk_web(S_R_5, CURRENT_ASK)
-
-        range_score_M5 = Indicators.get_range(S_R_5)
-        range_score_M15 = Indicators.get_range(S_R_15)
-        range_score_D = Indicators.get_range(S_R_D)
-
-        #support and resistance ranges when its doing well, trend indicator when its doing well, risk score when its doing well
+        print("b4 sim")            
         breakout_bool = False
-        # Find minimum and maximum prices in each half
-        min_top_half_M15 = min(top_half_M15)
-        max_bottom_half_M15 = max(bottom_half_M15)
-        min_top_half_M5 = min(top_half_M5)
-        max_bottom_half_M5 = max(bottom_half_M5)
-        min_top_half_D = min(top_half_D)
-        max_bottom_half_D = max(bottom_half_D)
-
-        #print(RSI_14_D)
-        # Determine whether to buy, sell, or hold
-
-        if CURRENT_ASK < max_bottom_half_M5 and risk_score_D < 0.7:
-            if CURRENT_ASK < max_bottom_half_M15 and risk_score_M5 > 0.5:
-                if CURRENT_ASK < EMA_50 and CURRENT_ASK > EMA_9:
-                    sd.SELL = True
-                    sd.BUY = False
-        if CURRENT_ASK > min_top_half_M5 and risk_score_D < 0.7:
-            if CURRENT_ASK > min_top_half_M15 and risk_score_M5 > 0.5:
-                if CURRENT_ASK > EMA_50 and CURRENT_ASK < EMA_9:
-                    sd.BUY = True
-                    sd.SELL = False
-                    
-        if not self.simulation:
-            self.snapshot = {
-                'risk_score_D': risk_score_D,
-                'risk_score_M15': risk_score_M15,
-                'risk_score_M5': risk_score_M5,
-                'range_score_M5': range_score_M5,
-                'range_score_M15': range_score_M15,
-                'range_score_D': range_score_D,
-                'RSI_14_D': RSI_14_D,
-                'time' : self.current_timestamp,
-                'sd.BUY' : sd.BUY,
-                'sd.SELL' : sd.SELL,
-                'breakout' : breakout_bool
-            }
-
-            #self.algorithm_tools.log_to_main(f'>> snapshot @ : {self.snapshot}')
-            
         if TRADE_COUNT == 0:
-
+            print(TRADE_COUNT)
             if not breakout_bool:
-                if self.SELL:
-                    if RSI_14_D > 70:
-                        return
-                    
-                if self.BUY:
-                    if RSI_14_D < 30:
-                        return
                 sd.add_price = 0
                 sd.prompted = False
                 sd.original = 0
@@ -463,17 +405,17 @@ class handfruit_hedge:
                     self.algorithm_tools.log_to_main(f'REALIZED_PERC $: {REALIZED_PERC}')
                     self.api.close_position(self.symbol, long_units=units_l, acc=sim, unrealized=UNREALIZED, ask=CURRENT_ASK, current_time=current_time)
             
-            if MARGIN_CLOSEOUT_PERCENT > 0.10:
-                print(MARGIN_CLOSEOUT_PERCENT)
-                message=f"Margin closeout percent is {MARGIN_CLOSEOUT_PERCENT}%, do you want to continue trading? (y/n): "
-                self.algorithm_tools.phone_alert(msg=message)
-                if not sd.prompted:
-                    answer = input(f"Margin closeout percent is {MARGIN_CLOSEOUT_PERCENT}%, do you want to continue trading? (y/n): ")
-                    if answer.lower() == "n":
-                        raise Exception("Trading halted due to high margin closeout percent.")
-                    elif answer.lower() == "y":
-                        sd.prompted = True
-                return
+            # if MARGIN_CLOSEOUT_PERCENT > 0.10:
+            #     print(MARGIN_CLOSEOUT_PERCENT)
+            #     message=f"Margin closeout percent is {MARGIN_CLOSEOUT_PERCENT}%, do you want to continue trading? (y/n): "
+            #     self.algorithm_tools.phone_alert(msg=message)
+            #     if not sd.prompted:
+            #         answer = input(f"Margin closeout percent is {MARGIN_CLOSEOUT_PERCENT}%, do you want to continue trading? (y/n): ")
+            #         if answer.lower() == "n":
+            #             raise Exception("Trading halted due to high margin closeout percent.")
+            #         elif answer.lower() == "y":
+            #             sd.prompted = True
+            #     return
             if MARGIN_CLOSEOUT_PERCENT > 0.25:
                 if UNREALIZED > round(EQUITY * -0.05, 2):
                     self.algorithm_tools.log_to_main(f'UNREALIZED PROFIT: {UNREALIZED}')
@@ -488,10 +430,142 @@ class handfruit_hedge:
                     self.algorithm_tools.log_to_main(f'CLOSE $: {CURRENT_ASK}')
                     self.algorithm_tools.log_to_main(f'REALIZED_PERC $: {REALIZED_PERC}')
                     self.api.close_position(self.symbol, long_units=units_l, acc=sim, unrealized=UNREALIZED, ask=CURRENT_ASK, current_time=current_time)
-                    break 
+                    break
                 
-                #add more positions logic here
+            position_size = size_tools.saw_with_news_impact(sim, EQUITY, sd.original, current_time=self.current_timestamp, amplitude=1, offset=5)
+            if risk_model == 1:
+                if not breakout_bool:
+                    if sd.original <= 4:
+                        if units_l > 0 and sd.add_price - CURRENT_ASK >= 0.0008:
+                            for v in S_R_5:
+                                if len(v) == 1 and round(v[0] - 0.0002, 5) <= CURRENT_ASK <= round(v[0] + 0.0002, 5) or len(v) > 1 and v[0] < CURRENT_ASK < v[-1]:
+                                    size = position_size
+                                    self.api.place_trade(self.symbol, size, 1, sim, sd.original, CURRENT_ASK, current_time)
+                                    sd.original += 1
+                                    print(f'risk model: {risk_model} : cos: {cos_}\noriginal: {sd.original}\nUNREALIZED PROFIT: {UNREALIZED}')
+                                    self.algorithm_tools.log_to_main(f'UNITS: {units_l}\nMARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}\n>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED} : RISK MODEL: {risk_model} : cos: {cos_} : prev_date : {prev_date} : next_date : {next_date}')
+                                    sd.add_price = CURRENT_ASK
+                                    break
 
+                        if units_s < 0 and CURRENT_ASK - sd.add_price >= 0.0008:
+                            for v in S_R_5:
+                                if len(v) == 1 and round(v[0] - 0.0002, 5) <= CURRENT_ASK <= round(v[0] + 0.0002, 5) or len(v) > 1 and v[0] < CURRENT_ASK < v[-1]:
+                                    size = position_size
+                                    self.api.place_trade(self.symbol, size, -1, sim, sd.original, CURRENT_ASK, current_time)
+                                    sd.original += 1
+                                    print(f'risk model: {risk_model} : cos: {cos_}\noriginal: {sd.original}\nUNREALIZED PROFIT: {UNREALIZED}')
+                                    self.algorithm_tools.log_to_main(f'UNITS: {units_s}\nMARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}\n>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED} : RISK MODEL: {risk_model} : cos: {cos_} : prev_date : {prev_date} : next_date : {next_date} : total_seconds : {total_seconds}')
+                                    sd.add_price = CURRENT_ASK
+                                    break
+            if risk_model == 2:
+                if not breakout_bool:
+                    if sd.original in (1, 2, 3, 4):
+                        if units_l > 0 and sd.add_price - CURRENT_ASK >= 0.0004*sd.original:
+                            print(f'original: {sd.original}')
+                            self.api.place_trade(self.symbol, position_size, 1, sim, sd.original, CURRENT_ASK, current_time)
+                            sd.original += 1
+                            print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                            self.algorithm_tools.log_to_main(f'UNITS: {units_l}')
+                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                            sd.add_price = CURRENT_ASK
+                        elif units_s < 0 and CURRENT_ASK - sd.add_price >= 0.0004*sd.original:
+                            print(f'original: {sd.original}')
+                            self.api.place_trade(self.symbol, position_size, -1, sim, sd.original, CURRENT_ASK, current_time)
+                            sd.original += 1
+                            print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                            self.algorithm_tools.log_to_main(f'UNITS: {units_s}')
+                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                            sd.add_price = CURRENT_ASK
+            if MARGIN_CLOSEOUT_PERCENT < 0.3:
+                if sd.original > 4:
+                    if units_l > 0:
+                        if sd.add_price - CURRENT_ASK >= sd.add_price_increment:
+                            for v in S_R_15:
+                                l = len(v)
+                                if l > 1:
+                                    if CURRENT_ASK > v[0] and CURRENT_ASK < v[-1]:
+                                        if sd.original < 12:
+                                            print(f'original: {sd.original}')
+                                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                            self.api.place_trade(self.symbol, position_size, 1, sim, sd.original, CURRENT_ASK, current_time)
+                                            sd.original += 1
+                                            sd.add_price = CURRENT_ASK
+                                            sd.add_price_increment += sd.add_price_increment
+                                            break
+                                        print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                                        self.algorithm_tools.log_to_main(f'UNITS: {units_l}')
+                                        self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                        self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                        sd.add_price = CURRENT_ASK
+                                        sd.add_price_increment += sd.add_price_increment
+                                        break
+                                if l == 1:
+                                    if CURRENT_ASK >= round(v[0]-0.0005, 5) and CURRENT_ASK <= round(v[0]+0.0005, 5):
+                                        if sd.original < 12:
+                                            print(f'original: {sd.original}')
+                                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                            self.api.place_trade(self.symbol, position_size, 1, sim, sd.original, CURRENT_ASK, current_time)
+                                            sd.original += 1
+                                            sd.add_price = CURRENT_ASK
+                                            sd.add_price_increment += sd.add_price_increment
+                                            break
+                                        print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                                        self.algorithm_tools.log_to_main(f'UNITS: {units_l}')
+                                        self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                        self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                        sd.add_price = CURRENT_ASK
+                                        sd.add_price_increment += sd.add_price_increment
+                                        break
+                    if units_s < 0:
+                        if CURRENT_ASK - sd.add_price >= sd.add_price_increment:
+                            for v in S_R_15:
+                                l = len(v)
+                                if l > 1:
+                                    if CURRENT_ASK > v[0] and CURRENT_ASK < v[-1]:
+                                        if sd.original < 10:
+                                            print(f'original: {sd.original}')
+                                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                            self.api.place_trade(self.symbol, position_size, -1, sim, sd.original, CURRENT_ASK, current_time)
+                                            sd.original += 1
+                                            sd.add_price = CURRENT_ASK
+                                            sd.add_price_increment += sd.add_price_increment
+                                            break
+                                        print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                                        self.algorithm_tools.log_to_main(f'UNITS: {units_s}')
+                                        self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                        self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                        sd.add_price = CURRENT_ASK
+                                        sd.add_price_increment += sd.add_price_increment
+                                        break
+                                if l == 1:
+                                    if CURRENT_ASK >= round(v[0]-0.0005, 5) and CURRENT_ASK <= round(v[0]+0.0005, 5):
+                                        if sd.original < 10:
+                                            print(f'original: {sd.original}')
+                                            self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                            self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                            self.api.place_trade(self.symbol, position_size, -1, sim, sd.original, CURRENT_ASK, current_time)
+                                            sd.original += 1
+                                            sd.add_price = CURRENT_ASK
+                                            sd.add_price_increment += sd.add_price_increment
+                                            break
+                                        print(f'UNREALIZED PROFIT: {UNREALIZED}')
+                                        self.algorithm_tools.log_to_main(f'UNITS: {units_s}')
+                                        self.algorithm_tools.log_to_main(f'MARGIN_REMAINING: {MARGIN_REMAINING} : MARGIN_CLOSEOUT_PERCENT : {MARGIN_CLOSEOUT_PERCENT}')
+                                        self.algorithm_tools.log_to_main(f'>> SR LEVEL @ : ASK_{CURRENT_ASK} : UNREALIZED{UNREALIZED}')
+                                        sd.add_price = CURRENT_ASK
+                                        sd.add_price_increment += sd.add_price_increment
+                                        break
+                                    
+            
+                            
+
+            
+    
     def OnEndOfAlgorithm(self):
         sim = self.simulation_data[self.symbol]
         # Create Plotly chart
@@ -624,6 +698,7 @@ class handfruit_hedge:
         fig.write_html(f'simulation_results_{time.time()}.html', auto_open=True)
         print('Plot saved to file: simulation_results.html')
 
+    
     def run(self, restart=True):
 
         sd = self.symbolData[self.symbol]
@@ -682,8 +757,7 @@ class handfruit_hedge:
             self.algorithm_tools.log_to_main(log_message)
             self.algorithm_tools.log_to_main(self.snapshot)
             # Create a new file named "log.txt" and write the log message to it
-            with open("favorable.txt", "w") as f:
-                f.write(log_message)
+
             # End of simulation
             
 

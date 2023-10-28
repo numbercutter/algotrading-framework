@@ -101,7 +101,7 @@ def run_collection(ic: InstrumentCollection, api: OandaApiSim):
         for p2 in our_curr:
             pair = f"{p1}_{p2}"
             if pair in ic.instruments_dict.keys():
-                for granularity in ['M1']:
+                for granularity in ['M5', 'M1', 'H4', 'D', 'M15', 'H1']:
                     print(pair, granularity)
                     collect_data(
                         pair,
